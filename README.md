@@ -1,0 +1,2 @@
+# SalemWitchTrial
+Class Project
