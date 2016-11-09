@@ -14,12 +14,9 @@ import java.io.IOException;
 import java.util.Scanner;
 
 public class SWTClient{
-  class Control{
-    public volatile boolean end=false;
-  }
   public static void main(String[] args){
     Scanner keyboard;
-    String userInput="", serverReply="", IOState="";                              
+    String userInput="", serverReply="", IOState="";
     boolean isFirst;
     Socket connectionSock;
     BufferedWriter serverOutput;
@@ -30,61 +27,70 @@ public class SWTClient{
     System.out.print("Please enter the address of the server (press enter if it is a localhost): ");
     userInput= keyboard.nextLine();
     if(userInput.equals(""))
-      userInput="localhost";
+    userInput="localhost";
     System.out.println("Connecting to server on port 7654.");
     try{
+      connectionSock=new Socket(userInput, 7654);
+      serverOutput= new BufferedWriter(new OutputStreamWriter(connectionSock.getOutputStream()));
+      serverInput= new BufferedReader(new InputStreamReader(connectionSock.getInputStream()));
+      System.out.println("Connection made.");
+
+      System.out.println("Welcome to Salem Witch Trial Game!!");
+      System.out.println("You will be matched with 8 other players to play a game. Here are the rules:");
+      System.out.println("    - You will be given a role which will be either on Innocent or Mafia faction.");
+      System.out.println("    - The Mafia will win if it has more players than the Innocent does.");
+      System.out.println("    - The Innocent will win if all the Maifa members are killed.");
+      System.out.println("--------------------------------------------------------------------------------------");
+
+      System.out.print("Please enter a name you wished to be addressed as: ");
+      userInput= keyboard.nextLine();
+      serverOutput.write(userInput);
+      serverOutput.flush();
+
+      IOLoop:
       while(true){
-        connectionSock=new Socket(userInput, 7654);
-        serverOutput= new BufferedWriter(new OutputStreamWriter(connectionSock.getOutputStream()));
-        serverInput= new BufferedReader(new InputStreamReader(connectionSock.getInputStream()));
-        System.out.println("Connection made.");
+        IOState=serverInput.readLine();
+        switch(IOState){
 
-        System.out.println("Welcome to Salem Witch Trial Game!!");
-        System.out.println("You will be matched with 8 other players to play a game. Here are the rules:");
-        System.out.println("    - You will be given a role which will be either on Innocent or Mafia faction.");
-        System.out.println("    - The Mafia will win if it has more players than the Innocent does.");
-        System.out.println("    - The Innocent will win if all the Maifa members are killed.");
-        System.out.println("--------------------------------------------------------------------------------------");
+          case "0": //server is broadcasting information
+          serverReply= serverInput.readLine();
+          System.out.println(serverReply);
+          break;
 
-        System.out.print("Please enter a name you wished to be addressed as: ");
-        userInput= keyboard.nextLine();
-        serverOutput.write(userInput);
-        serverOutput.flush();
-        
-        while(true){
-          IOState=serverInput.readLine();
-          switch(IOState){
-            case "0":
-              serverReply= serverInput.readLine();
-              System.out.println(serverReply);
-              break;
-            case "1":
-              serverReply= serverInput.readLine();
-              System.out.println(serverReply);
-              userInput= keyboard.nextLine();
-              serverOutput.write(userInput);
-              serverOutput.flush();
-              break;
-            case "2":
-              serverInput.close();
-              ClientListener listener = new ClientListener(connectionSock, control);
-	      Thread theThread = new Thread(listener);
-	      theThread.start();
-              while(!control.end){
-                userInput= keyboard.nextLine();
-                if (control.end)//double checking
-                  break;
-                serverOutput.write(userInput);
-                serverOutput.flush();
-              }
-              serverInput= new BufferedReader(new InputStreamReader(connectionSock.getInputStream()));
-              break;
-            default:
-              System.out.println("IO Error had occured in the server.");
-              break;
+          case "1"://server is asking a question and expect a response
+          serverReply= serverInput.readLine();
+          System.out.println(serverReply);
+          userInput= keyboard.nextLine();
+          serverOutput.write(userInput);
+          serverOutput.flush();
+          break;
+
+          case "2"://server is in chat mode
+          serverInput.close();
+          control.end=false;//shared variable between two thread to know when to end
+          ClientListener listener = new ClientListener(connectionSock, control);
+          Thread theThread = new Thread(listener);
+          theThread.start();
+          while(!control.end){
+            userInput= keyboard.nextLine();
+            if (control.end)//double checking before sending the line
+            break;
+            serverOutput.write(userInput);
+            serverOutput.flush();
           }
-              
+          serverInput= new BufferedReader(new InputStreamReader(connectionSock.getInputStream()));
+          break;
+
+          case "3"://server said game over
+          serverReply= serverInput.readLine();
+          System.out.println(serverReply);
+          break IOLoop;
+
+          default:
+          System.out.println("IO Error had occured in the server.");
+          break;
         }
+
       }
     }
     catch (IOException e){
