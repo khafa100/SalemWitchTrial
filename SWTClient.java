@@ -33,8 +33,9 @@ public class SWTClient{
       connectionSock=new Socket(userInput, 7654);
       serverOutput= new BufferedWriter(new OutputStreamWriter(connectionSock.getOutputStream()));
       serverInput= new BufferedReader(new InputStreamReader(connectionSock.getInputStream()));
-      System.out.println("Connection made.");
 
+      System.out.println("Connection made.");
+      System.out.println("--------------------------------------------------------------------------------------");
       System.out.println("Welcome to Salem Witch Trial Game!!");
       System.out.println("You will be matched with 8 other players to play a game. Here are the rules:");
       System.out.println("    - You will be given a role which will be either on Innocent or Mafia faction.");
@@ -44,7 +45,7 @@ public class SWTClient{
 
       System.out.print("Please enter a name you wished to be addressed as: ");
       userInput= keyboard.nextLine();
-      serverOutput.write(userInput);
+      serverOutput.write(userInput+"\n");
       serverOutput.flush();
 
       IOLoop:
@@ -61,24 +62,22 @@ public class SWTClient{
           serverReply= serverInput.readLine();
           System.out.println(serverReply);
           userInput= keyboard.nextLine();
-          serverOutput.write(userInput);
+          serverOutput.write(userInput+"\n");
           serverOutput.flush();
           break;
 
           case "2"://server is in chat mode
-          serverInput.close();
           control.end=false;//shared variable between two thread to know when to end
-          ClientListener listener = new ClientListener(connectionSock, control);
+          ClientListener listener = new ClientListener(serverInput, control);
           Thread theThread = new Thread(listener);
           theThread.start();
           while(!control.end){
             userInput= keyboard.nextLine();
             if (control.end)//double checking before sending the line
             break;
-            serverOutput.write(userInput);
+            serverOutput.write(userInput+"\n");
             serverOutput.flush();
           }
-          serverInput= new BufferedReader(new InputStreamReader(connectionSock.getInputStream()));
           break;
 
           case "3"://server said game over
@@ -88,10 +87,13 @@ public class SWTClient{
 
           default:
           System.out.println("IO Error had occured in the server.");
-          break;
+          break IOLoop;
         }
 
       }
+      serverInput.close();
+      serverOutput.close();
+      connectionSock.close();
     }
     catch (IOException e){
       System.out.println(e.getMessage());

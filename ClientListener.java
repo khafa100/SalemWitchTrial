@@ -11,19 +11,20 @@ import java.io.InputStreamReader;
 import java.io.IOException;
 
 public class ClientListener implements Runnable{
-	private Socket connectionSock = null;
+	private BufferedReader serverInput = null;
 	private Control control=null;
 
-	ClientListener(Socket sock, Control control){
-		this.connectionSock = sock;
+	ClientListener(BufferedReader serverInput, Control control){
+		this.serverInput=serverInput;
 		this.control=control;
 	}
 
 	public void run(){
        		 // Wait for data from the server.  If received, output it.
 		try{
-			BufferedReader serverInput= new BufferedReader(new InputStreamReader(connectionSock.getInputStream()));
 			String IOState, serverReply;
+			serverReply= serverInput.readLine();
+			System.out.println(serverReply);
 			while (!control.end){
 				// Get data sent from the server
 				IOState = serverInput.readLine();
@@ -31,9 +32,10 @@ public class ClientListener implements Runnable{
 					serverReply= serverInput.readLine();
 					System.out.println(serverReply);
 				}
-				else{
+				else if (IOState.equals("0")){
 					control.end=true;
-					serverInput.close();
+					serverReply= serverInput.readLine();
+					System.out.println(serverReply);
 				}
 			}
 		}
