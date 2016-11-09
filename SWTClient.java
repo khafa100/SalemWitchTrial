@@ -27,7 +27,7 @@ public class SWTClient{
     Control control= new Control();
 
     keyboard = new Scanner(System.in);
-    System.out.print("Please enter the address of the Nim server (press enter if it is a localhost): ");
+    System.out.print("Please enter the address of the server (press enter if it is a localhost): ");
     userInput= keyboard.nextLine();
     if(userInput.equals(""))
       userInput="localhost";
@@ -68,8 +68,8 @@ public class SWTClient{
             case "2":
               serverInput.close();
               ClientListener listener = new ClientListener(connectionSock, control);
-			        Thread theThread = new Thread(listener);
-			        theThread.start();
+	      Thread theThread = new Thread(listener);
+	      theThread.start();
               while(!control.end){
                 userInput= keyboard.nextLine();
                 if (control.end)//double checking
@@ -85,24 +85,6 @@ public class SWTClient{
           }
               
         }
-
-        if(serverReply.equals("8")){
-          System.out.println("Waiting for other players...");
-          serverReply=serverInput.readLine();
-        }
-        role= Integer.parseInt(serverReply);
-        System.out.println("--------------------------------------------------------------------------------------");
-        System.out.println("Your role is "+roleList[role]+".");
-        System.out.println(descriptionList[role]);
-        System.out.println("--------------------------------------------------------------------------------------");
-        
-        connectionSock.close();
-        serverInput.close();
-        serverOutput.close();
-        System.out.print("Would you like to play again? (y/n): ");
-        userInput= keyboard.nextLine();
-        if(userInput.equals("n"))
-          break;
       }
     }
     catch (IOException e){
