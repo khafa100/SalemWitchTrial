@@ -33,6 +33,9 @@ public class Player{
   public int getRole(){
     return role;
   }
+  public void setRole(int r){
+    role=r;
+  } 
   public void close(){
     if(playerOutput!=null)
     playerOutput.close();
