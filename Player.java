@@ -61,6 +61,9 @@ public class Player{
   public void setRole(int r){
     role=r;
   }
+  public void setAlive(boolean a){
+    alive=a;
+  }
   public void close(){
     try{
       if(playerOutput!=null)

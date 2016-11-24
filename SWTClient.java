@@ -16,7 +16,7 @@ import java.util.Scanner;
 public class SWTClient{
   public static void main(String[] args){
     Scanner keyboard;
-    String userInput="", serverReply="", IOState="";
+    String userInput="", serverReply="", IOState="", username="";
     boolean isFirst;
     Socket connectionSock;
     BufferedWriter serverOutput;
@@ -44,8 +44,8 @@ public class SWTClient{
       System.out.println("--------------------------------------------------------------------------------------");
 
       System.out.print("Please enter a name you wished to be addressed as: ");
-      userInput= keyboard.nextLine();
-      serverOutput.write(userInput+"\n");
+      username= keyboard.nextLine();
+      serverOutput.write(username+"\n");
       serverOutput.flush();
 
       IOLoop:
