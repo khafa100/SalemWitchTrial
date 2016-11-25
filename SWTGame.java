@@ -35,7 +35,6 @@ public class SWTGame implements Runnable
 
 		//Starting game
 		System.out.println("Sending out the current dead/alive state...");
-		printBoard();
 
 		
 		for(Player p: playerList){
@@ -266,30 +265,12 @@ public class SWTGame implements Runnable
 		}
 		Collections.shuffle(playerList);
 	}
-	private void printBoard(){
-		String alive="0\nAlive:  ";
-		String dead="\n0\nDead:  ";
-		for(Player p: playerList){
-			if(p.isAlive()){
-				alive+=p.getUsername()+", ";
-			}
-			else{
-				dead+=p.getUsername()+" ("+roleArray[p.getRole()]+"), ";
-			}
-		}
-		alive= alive.substring(0,alive.length()-2);//deleting last instance of ", "
-		dead= dead.substring(0,dead.length()-2);//deleting last instance of ", "
-		broadcastPlayers("0\n-----------------------------------------------------------------");
-		broadcastPlayers(alive+dead);
-		broadcastPlayers("0\n-----------------------------------------------------------------");
-	}
 	private void broadcastPlayers(String s){
 		for(Player p: playerList)
 		  p.sendMessage(s);
 	}
 	private int isGameOver(){//send the updated board and check for end conditions
 		broadcastPlayers("0\nUpdating the player list...");
-		printBoard();
 		if (sync.mafiaMember>sync.innocentMember){
 			broadcastPlayers("0\nThe game is over since there are more Mafia members now.");
 			return 2;

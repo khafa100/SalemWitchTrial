@@ -17,6 +17,15 @@ public class ClientHandler implements Runnable {
 	private PlayerSync sync;
 	private Socket playerSocket;
 	private Player nominee=null;
+	private String descriptionArray[]= new String[]{"You heal one person (including yourself) each night preventing them from dying.",
+	"You are a part of the crowd that can vote to lynch people each round.",
+	"You are a part of the crowd that can vote to lynch people each round.",
+	"You investigate one person each night to find out if the target is a member of the Mafia, except for the Godfather and Vigilante. Beware for Framer can fool you.",
+	"You watch one person each night to see who visits them.",
+	"You kill someone each night to save the town.",
+	"You choose someone to frame at night. If the target is investigated, they will appear to be a member of the Mafia. If Mafioso dies, you will take their position.",
+	"You carry out Godfather’s orders. If Godfather dies, you will take their position.",
+	"You will kill someone each night if the Mafioso is dead. Else, the Mafioso will kill the target for you."};
 	private String roleArray[]= new String[]{"Doctor","Civilian","Civilian","Sheriff","Lookout","Vigilante","Framer","Mafiaso","Godfather"};
 	private String playerText=null, deadInitial="\n0\nDead:  ";
 
@@ -34,9 +43,34 @@ public class ClientHandler implements Runnable {
 			while(sync.currentStage<6) {
 				switch (sync.currentStage){
 					case 1:
-					if((sync.vote[0]!=-1 && playerSocket==playerList.get(sync.vote[0]).getSocket()) || (sync.vote[1]!=-1 && playerSocket==playerList.get(sync.vote[1]).getSocket())){
-					  if(deadQuestion()){
-					    break gameloop;
+					printBoard();
+
+					for(int x=0; x<2; ++x){
+					  if(sync.vote[x]!=-1){
+					    if(playerSocket==playerList.get(sync.vote[x]).getSocket()){
+					      if(deadQuestion()){
+					        break gameloop;
+					      }
+					    }
+					    else if(player.isAlive()){
+					      Player dead=playerList.get(x);
+							if(dead.getRole()==8){
+								if(player.getRole()==7){
+								  player.sendMessage("0\nYou role is promoted to Godfather.");
+									player.setRole(8);
+								}
+								else if(player.getRole()==6){
+								  player.sendMessage("0\nYou role is promoted to Mafiaso.");
+									player.setRole(7);
+								}
+								player.sendMessage("0\n"+descriptionArray[player.getRole()]);
+							}
+							else if(dead.getRole()==7 && player.getRole()==6){
+							  player.sendMessage("0\nYou role is promoted to Mafiaso.");
+							  player.sendMessage("0\n"+descriptionArray[7]);
+								player.setRole(7);
+							}
+						}
 					  }
 					}
 					if(player.isAlive()){
@@ -69,6 +103,7 @@ public class ClientHandler implements Runnable {
 					break;
 
 					case 2:
+					printBoard();
 					player.sendMessage("0\nYou can nominate one person to lynch.");
 					int count=0;
 					for(Player p: playerList) {
@@ -106,6 +141,7 @@ public class ClientHandler implements Runnable {
 					break;
 
 					case 3:
+					printBoard();
 					if(sync.mostVote==-1){
 						player.sendMessage("0\nNo one got majority of vote to get lynched.");
 					}
@@ -122,13 +158,18 @@ public class ClientHandler implements Runnable {
 							if(player.isAlive()){
 							if(nominee.getRole()==8){
 								if(player.getRole()==7){
+								  player.sendMessage("0\nYou role is promoted to Godfather.");
 									player.setRole(8);
 								}
 								else if(player.getRole()==6){
+								  player.sendMessage("0\nYou role is promoted to Mafiaso.");
 									player.setRole(7);
 								}
+								player.sendMessage("0\n"+descriptionArray[player.getRole()]);
 							}
 							else if(nominee.getRole()==7 && player.getRole()==6){
+							  player.sendMessage("0\nYou role is promoted to Mafiaso.");
+							  player.sendMessage("0\n"+descriptionArray[7]);
 								player.setRole(7);
 							}
 						}
@@ -170,6 +211,7 @@ public class ClientHandler implements Runnable {
 					break;
 
 					case 4:
+					printBoard();
 					player.sendMessage("0\nStarting night action mode...");
 					count=0;
 					for(Player p: playerList) {
@@ -242,7 +284,7 @@ public class ClientHandler implements Runnable {
 
   				case 5:
   				if(player.isAlive()){
-  					if(player.getRole()==4){
+  					if(player.getRole()==3){
   						if(sync.vote[3]==1){
   							player.sendMessage("0\nThe person you investigated is a memeber of the Mafia.");
   						}
@@ -250,7 +292,7 @@ public class ClientHandler implements Runnable {
   							player.sendMessage("0\nThe person you investigated is innocent.");
   						}
   					}
-  					if(player.getRole()==5){
+  					if(player.getRole()==4){
   						if(sync.vote[3]==-1){
   							player.sendMessage("0\nNo one visited the person you were watching last night.");
   						}
@@ -292,7 +334,9 @@ public class ClientHandler implements Runnable {
 		}
 		alive= alive.substring(0,alive.length()-2);//deleting last instance of ", "
 		dead= dead.substring(0,dead.length()-2);//deleting last instance of ", "
+		player.sendMessage("0\n-----------------------------------------------------------------");
 		player.sendMessage(alive+dead);
+		player.sendMessage("0\n-----------------------------------------------------------------");
 	}
 	private void broadcastPlayers(String s){
 		for(Player p: playerList) {
