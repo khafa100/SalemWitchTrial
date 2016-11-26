@@ -1,61 +1,413 @@
 /**
- * ClientHandler.java
- *
- * This class handles communication between the client
- * and the server. It runs in a separate thread but has a
- * link to a common list of sockets to handle broadcast.
- */
+* ClientHandler.java
+*
+* This class handles communication between the client
+* and the server. It runs in a separate thread but has a
+* link to a common list of sockets to handle broadcast.
+*/
 
-import java.net.Socket;
-import java.io.DataOutputStream;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.io.IOException;
-import java.util.Scanner;
+import java.net.Socket;
 import java.util.ArrayList;
 
 public class ClientHandler implements Runnable {
-	private Socket connectionSock = null;
-	private ArrayList<Socket> socketList;
+	private Player player;
+	private ArrayList<Player> playerList;
+	private ArrayList<Player> waitingList;
+	private PlayerSync sync;
+	private Socket playerSocket;
+	private Player nominee=null;
+	private String descriptionArray[]= new String[]{"You heal one person (including yourself) each night preventing them from dying.",
+	"You are a part of the crowd that can vote to lynch people each round.",
+	"You are a part of the crowd that can vote to lynch people each round.",
+	"You investigate one person each night to find out if the target is a member of the Mafia, except for the Godfather and Vigilante. Beware for Framer can fool you.",
+	"You watch one person each night to see who visits them.",
+	"You kill someone each night to save the town.",
+	"You choose someone to frame at night. If the target is investigated, they will appear to be a member of the Mafia. If Mafioso dies, you will take their position.",
+	"You carry out Godfather’s orders. If Godfather dies, you will take their position.",
+	"You will kill someone each night if the Mafioso is dead. Else, the Mafioso will kill the target for you."};
+	private String roleArray[]= new String[]{"Doctor","Civilian","Civilian","Sheriff","Lookout","Vigilante","Framer","Mafiaso","Godfather"};
+	private String playerText=null, deadInitial="\n0\nDead:  ";
 
-	ClientHandler(Socket sock, ArrayList<Socket> socketList) {
-		this.connectionSock = sock;
-		this.socketList = socketList; // Keep reference to master list
+	ClientHandler(Player player, ArrayList<Player> playerList, ArrayList<Player> waitingList, PlayerSync sync) {
+		this.player=player;
+		this.sync=sync;
+		this.playerList=playerList; // Keep reference to master list
+		this.waitingList=waitingList;
+		playerSocket=player.getSocket();
 	}
 
 	public void run() {
-		// Get data from a client and send it to everyone else
 		try {
-			System.out.println("Connection made with socket " + connectionSock);
-			BufferedReader clientInput = new BufferedReader(
-				new InputStreamReader(connectionSock.getInputStream()));
-			while(true) {
-				// Get data sent from a client
-				String clientText = clientInput.readLine();
-				if(clientText != null) {
-					System.out.println("Received: " + clientText);
-					// Turn around and output this data
-					// to all other clients except the one
-					// that sent us this information
-					for(Socket s: socketList) {
-						if(s != connectionSock) {
-							DataOutputStream clientOutput = new DataOutputStream(s.getOutputStream());
-							clientOutput.writeBytes(clientText + "\n");
+			gameloop:
+			while(sync.currentStage<6) {
+				switch (sync.currentStage){
+					case 1:
+					printBoard();
+
+					for(int x=0; x<2; ++x){
+					  if(sync.vote[x]!=-1){
+					    if(playerSocket==playerList.get(sync.vote[x]).getSocket()){
+					      if(deadQuestion()){
+					        break gameloop;
+					      }
+					    }
+					    else if(player.isAlive()){
+					      Player dead=playerList.get(x);
+							if(dead.getRole()==8){
+								if(player.getRole()==7){
+								  player.sendMessage("0\nYou role is promoted to Godfather.");
+									player.setRole(8);
+								}
+								else if(player.getRole()==6){
+								  player.sendMessage("0\nYou role is promoted to Mafiaso.");
+									player.setRole(7);
+								}
+								player.sendMessage("0\n"+descriptionArray[player.getRole()]);
+							}
+							else if(dead.getRole()==7 && player.getRole()==6){
+							  player.sendMessage("0\nYou role is promoted to Mafiaso.");
+							  player.sendMessage("0\n"+descriptionArray[7]);
+								player.setRole(7);
+							}
+						}
+					  }
+					}
+					if(player.isAlive()){
+  					player.sendMessage("2\nYou can now chat for 2 minutes.");
+  					while(true){
+  						playerText = player.getMessage();
+  						if(playerText != null){
+  							if(!sync.endStage){
+  								broadcastPlayers("2\n["+player.getUsername()+"]: "+playerText);
+  							}
+  						}
+  						else {// Connection was lost
+  							System.out.println("Closing connection for " + player.getUsername());
+  							playerList.remove(player);// Remove from arraylist
+  							player.close();
+  							break gameloop;
+  						}
+  						if(sync.endStage){
+  							player.sendMessage("0\n2 minutes chatting has ended.Press \"Enter\" to continue...");
+  							break;
+  						}
+    				}
+    				sync.threadDone++;
+				  }
+					
+					player.sendMessage("0\nWaiting for other players to finish...");
+					while(sync.currentStage==1){
+						Thread.sleep(1000);
+					}
+					break;
+
+					case 2:
+					printBoard();
+					player.sendMessage("0\nYou can nominate one person to lynch.");
+					int count=0;
+					for(Player p: playerList) {
+						if(p.isAlive()){
+						count++;
+						player.sendMessage("0\n"+count+" :"+p.getUsername());
+					}
+					}
+					if(player.isAlive()){
+						player.sendMessage("1\nPlease choose the number corresponding to the username to nominate. (1-"+count+")");
+						while(true){
+							try{
+								playerText=player.getMessage();
+								int v = Integer.parseInt(playerText);
+								if(v<=sync.mafiaMember+sync.innocentMember&&v>0){
+									player.sendMessage("0\nWaiting for other players to finish...");
+									sync.vote[v-1]++;
+									break;
+								}
+								else
+								player.sendMessage("1\nPlease enter a number \"corresponding\" to the username to nominate. (1-"+count+")");
+							}
+							catch(NumberFormatException nfe){
+								System.out.println("Input was not an int.");
+								player.sendMessage("1\nPlease enter a \"number\" corresponding to the username to nominate. (1-"+count+")");
+							}
 						}
 					}
-				} else {
-					// Connection was lost
-					System.out.println("Closing connection for socket " + connectionSock);
-					// Remove from arraylist
-					socketList.remove(connectionSock);
-					connectionSock.close();
+					if(player.isAlive()){
+					  sync.threadDone++;
+					}
+					while(sync.currentStage==2){
+						Thread.sleep(1000);
+					}
 					break;
+
+					case 3:
+					printBoard();
+					if(sync.mostVote==-1){
+						player.sendMessage("0\nNo one got majority of vote to get lynched.");
+					}
+					else if(sync.mostVote==playerList.indexOf(player)){
+							player.sendMessage("0\nYou were lynched.");
+							if(deadQuestion()){
+							  break gameloop;
+							}
+					}
+					else{
+							nominee=playerList.get(sync.mostVote);
+							player.sendMessage("0\n"+nominee.getUsername()+" was lynched.");
+							player.sendMessage("0\nTheir role was "+roleArray[nominee.getRole()]+".");
+							if(player.isAlive()){
+							if(nominee.getRole()==8){
+								if(player.getRole()==7){
+								  player.sendMessage("0\nYou role is promoted to Godfather.");
+									player.setRole(8);
+								}
+								else if(player.getRole()==6){
+								  player.sendMessage("0\nYou role is promoted to Mafiaso.");
+									player.setRole(7);
+								}
+								player.sendMessage("0\n"+descriptionArray[player.getRole()]);
+							}
+							else if(nominee.getRole()==7 && player.getRole()==6){
+							  player.sendMessage("0\nYou role is promoted to Mafiaso.");
+							  player.sendMessage("0\n"+descriptionArray[7]);
+								player.setRole(7);
+							}
+						}
+					}
+					player.sendMessage("0\nGoing into night time...");
+					player.sendMessage("0\nMafia members are now chatting for 1 minute...");
+					if(player.isAlive()&&player.getRole()>5){
+						player.sendMessage("2\nYou can now chat with other Mafia Memebers for 1 minutes");
+						while(true){
+  						playerText = player.getMessage();
+  						if(playerText != null){
+  						  if(!sync.endStage){
+								  for(Player p: playerList){
+								    if(p.isAlive()&&p.getRole()>5&&p.getSocket()!=playerSocket){
+								      p.sendMessage("2\n["+player.getUsername()+"]: "+playerText);
+								    }
+								  }
+							  }
+  						}
+  						else {// Connection was lost
+  							System.out.println("Closing connection for" + player.getUsername());
+  							playerList.remove(player);// Remove from arraylist
+  							player.close();
+  							break gameloop;
+  						}
+    					if(sync.endStage){
+    						player.sendMessage("0\n1 minutes chatting has ended. Press \"Enter\" to continue...");
+    						break;
+    					}
+						}
+					}
+					if(player.isAlive()){
+					  sync.threadDone++;
+					}
+					player.sendMessage("0\nWaiting for other players to finish...");
+					while(sync.currentStage==3){
+    							Thread.sleep(1000);
+    			}
+					break;
+
+					case 4:
+					printBoard();
+					player.sendMessage("0\nStarting night action mode...");
+					count=0;
+					for(Player p: playerList) {
+						if(p.isAlive()){
+						count++;
+						player.sendMessage("0\n"+count+" :"+p.getUsername());
+					}
+					}
+					String msg="1\n";
+					if(player.isAlive()&&player.getRole()!=1&&player.getRole()!=2){
+					switch(player.getRole()){
+						case 0:
+									msg+= "Please choose the number corresponding to the username to save.";
+									break;
+						case 3:
+									msg+= "Please choose the number corresponding to the username to investigate.";
+									break;
+						case 4:
+									msg+= "Please choose the number corresponding to the username to lookout.";
+									break;
+						case 5:
+									msg+= "Please choose the number corresponding to the username to kill for justice.";
+									break;
+						case 6:
+									msg+= "Please choose the number corresponding to the username to frame.";
+									break;
+						case 7:
+									msg+= "Please choose the number corresponding to the username to kill in case if the Godfather doesn't choose a target.";
+									break;
+						case 8:
+									msg+= "Please choose the number corresponding to the username to order the Mafiaso to kill. (Enter 0 to not give an order)";
+									break;
+						default:
+									System.out.println("Error getting role...");
+									playerList.remove(player);
+									player.close();
+									break gameloop;
+					}
+					msg+=" (1-"+count+")";
+					player.sendMessage(msg);
+					while(true){
+						try{
+							playerText=player.getMessage();
+							int v = Integer.parseInt(playerText);
+							if(v<=sync.mafiaMember+sync.innocentMember && v>=0){
+								sync.vote[player.getRole()]=v-1;
+								break;
+							}
+							else{
+							player.sendMessage(msg);
+						}
+						}
+						catch(NumberFormatException nfe){
+							System.out.println("Input was not an int.");
+							player.sendMessage(msg);
+						}
+					}
+				}
+  				else if(player.getRole()==1 || player.getRole()==2){
+  					player.sendMessage("0\nWaiting for other players to decide...");
+  				}
+  				player.sendMessage("0\nProcessing all the actions...");
+  				if(player.isAlive()){
+  				  sync.threadDone++;
+  				}
+  				while(sync.currentStage==4){
+  					Thread.sleep(1000);
+  				}
+  				break;
+
+  				case 5:
+  				if(player.isAlive()){
+  					if(player.getRole()==3){
+  						if(sync.vote[3]==1){
+  							player.sendMessage("0\nThe person you investigated is a memeber of the Mafia.");
+  						}
+  						else{
+  							player.sendMessage("0\nThe person you investigated is innocent.");
+  						}
+  					}
+  					if(player.getRole()==4){
+  						if(sync.vote[3]==-1){
+  							player.sendMessage("0\nNo one visited the person you were watching last night.");
+  						}
+  						else{
+  							Player p= playerList.get(sync.vote[3]);
+  							player.sendMessage("0\nLast night, "+p.getUsername()+" visited the person you were watching.");
+  						}
+  					}
+  					sync.threadDone++;
+  				}
+  				while(sync.currentStage==5){
+  					Thread.sleep(1000);
+  				}
+  				break;
 				}
 			}
+			if(sync.currentStage==6){
+			  endQuestion();
+			}
+			
 		} catch (Exception e) {
-			Sytsem.out.println("Error: " + e.toString());
+			System.out.println("Error: " + e.toString());
 			// Remove from arraylist
-			socketList.remove(connectionSock);
+			playerList.remove(player);
+			player.close();
 		}
 	}
+
+	private void printBoard(){
+		String alive="0\nAlive:  ";
+		String dead=deadInitial;
+		for(Player p: playerList){
+			if(p.isAlive()){
+				alive+=p.getUsername()+", ";
+			}
+			else{
+				dead+=p.getUsername()+" ("+roleArray[p.getRole()]+"), ";
+			}
+		}
+		alive= alive.substring(0,alive.length()-2);//deleting last instance of ", "
+		dead= dead.substring(0,dead.length()-2);//deleting last instance of ", "
+		player.sendMessage("0\n-----------------------------------------------------------------");
+		player.sendMessage(alive+dead);
+		player.sendMessage("0\n-----------------------------------------------------------------");
+	}
+	private void broadcastPlayers(String s){
+		for(Player p: playerList) {
+			if(p.getSocket() != playerSocket)
+			p.sendMessage(s);
+		}
+	}
+	// private void isGameOver(){//send the updated board and check for end conditions
+	// 	player.sendMessage("0\nUpdating the player list...");
+	// 	printBoard();
+	// 	if (sync.mafiaMember>sync.innocentMember){
+	// 		player.sendMessage("0\nThe game is over since there are more Mafia members now.");
+	// 		endQuestion();
+	// 	}
+	// 	else if (sync.mafiaMember==0){
+	// 		player.sendMessage("0\nThe game is over since all Mafia members are dead.");
+	// 		endQuestion();
+	// 	}
+	// }
+	private void endQuestion(){
+		player.sendMessage("1\nDo you want to play another game? (y/n)");
+		playerText=player.getMessage();
+		if(playerText.equals("y")){
+			player.sendMessage("0\nJoining another game...");
+			playerList.remove(player);
+			waitingList.add(player);
+		}
+		else{
+			player.sendMessage("3\nHave a nice day.");
+			playerList.remove(player);
+			player.close();
+		}
+}
+  private boolean deadQuestion(){
+    player.sendMessage("0\nYou are dead.");
+    player.sendMessage("0\nPlease choose one option below. (1-3)");
+		player.sendMessage("0\n1. Quit this game and leave the server.");
+		player.sendMessage("0\n2. Quit this game and join another game.");
+		player.sendMessage("1\n3. Continue watching this game as a spectator.");
+		while(true){
+			try{
+				playerText=player.getMessage();
+				int v = Integer.parseInt(playerText);
+				if(v==1){
+					player.sendMessage("3\nHave a nice day.");
+					deadInitial+=player.getUsername()+" ("+roleArray[player.getRole()]+"), ";
+					playerList.remove(player);
+					player.close();
+					return true;
+				}
+				else if(v==2){
+					player.sendMessage("0\nJoining another game...");
+					deadInitial+=player.getUsername()+" ("+roleArray[player.getRole()]+"), ";
+					playerList.remove(player);
+					waitingList.add(player);
+					return true;
+				}
+				else if(v==3){
+					player.sendMessage("0\nEnjoy the conclusion.");
+					playerList.remove(player);
+					playerList.add(player);
+					return false;
+				}
+				else{
+					player.sendMessage("1\nPlease enter 1, 2, or 3.");
+				}
+			}
+			catch(NumberFormatException nfe){
+				System.out.println("Input was not an int.");
+				player.sendMessage("1\nPlease enter a \"number\".");
+			}
+    }
+  }
 }

@@ -9,7 +9,8 @@
 
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.io.DataOutputStream;
+import java.io.OutputStreamWriter;
+import java.io.BufferedWriter;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.IOException;
@@ -17,13 +18,20 @@ import java.util.ArrayList;
 
 public class SWTServer {
 	// Maintain list of all client sockets for broadcast
-	private ArrayList<Socket> socketList;
+	private ArrayList<Player> waitingList;
 
-	public SWTServer.java() {
-		socketList = new ArrayList<Socket>();
+
+	public SWTServer() {
+		waitingList = new ArrayList<Player>();
 	}
 
 	private void getConnection() {
+		ArrayList<Player> playerList;
+		Socket connectionSock;
+		BufferedWriter clientOutput;
+		BufferedReader clientInput;
+		String playerName;
+		Player player;
 		// Wait for a connection from the client
 		try {
 			System.out.println("Waiting for client connections on port 7654.");
@@ -33,22 +41,35 @@ public class SWTServer {
 			SWTGame game = new SWTGame();
 
 			while(true) {
-				for(int i = 1; i < 10; i++) {
-					Socket connectionSock = serverSock.accept();
-					// Add this socket to the list
-					socektList.add(connectionSock);
-					// Send to ClientHandler the socket and arraylist of all sockets
+					connectionSock = serverSock.accept();
+					clientOutput= new BufferedWriter(new OutputStreamWriter(connectionSock.getOutputStream()));
+		      clientInput= new BufferedReader(new InputStreamReader(connectionSock.getInputStream()));
+					playerName=clientInput.readLine();
+					player=new Player(connectionSock,clientInput,clientOutput,playerName,-1);
 
-					System.out.println("Player " + i + " connected successfully.");
+					waitingList.add(player);
+					System.out.println(playerName+" has connected successfully.");
 
-					ClientHandler handler = new ClientHandler(connectionSock, this.socketList);
-					Thread theThread = new Thread(handler);
-					theThread.start();
-			}
+					if(waitingList.size()<9){
+							clientOutput.write("0\n");
+							clientOutput.write("Waiting for more players...\n");
+							clientOutput.flush();
+					}
+					else{
+						playerList=new ArrayList<Player>();
+						for(int x=0; x<9; ++x){
+							playerList.add(waitingList.remove(0));
+						}
+						SWTGame game=new SWTGame(playerList,waitingList);
+						Thread theThread = new Thread(game);
+						theThread.start();
+					}
+
 			// Will never get here, but if the above loop is given
 			// an exit condition then we'll go ahead and close the socket
 			//serverSock.close();
 		}
+	}
 		catch (IOException e) {
 			System.out.println(e.getMessage());
 		}
