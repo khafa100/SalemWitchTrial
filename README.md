@@ -1,5 +1,8 @@
 # SalemWitchTrial
 Class Project
+* Roles
+	* Hein Thu: SWTClient.java, SWTGame.java, SWTServer.java, ClientHandler.java, ClientListener.java, Player.java, PlayerSync.java, Control.java
+	* Shereef Khafagi: SWTServer.java, ClientHandler.java
 * Game Description
 	* The game will have 9 total players each having one of these roles:
 		* 2 Civilians (Innocents): can vote to lynch people each round.
@@ -18,9 +21,6 @@ Class Project
 			* Every player alive can talk to each other on a chat server
 		* Nomination
 			* Each player can nominate a person to lynch or choose to abstain
-		* Lynching
-			* The player with most vote can have a final statement
-			* Afterward, the other players will decide to lynch or not lynch the victim
 		* Night Talk
 			* One minute long
 			* All Mafia members can discuss their plan
