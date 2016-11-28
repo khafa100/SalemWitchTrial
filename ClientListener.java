@@ -41,6 +41,7 @@ public class ClientListener implements Runnable{
 		}
 		catch (Exception e){
 			System.out.println("Error: " + e.toString());
+			control.end=true;
 		}
 	}
 } // ClientListener for MTClient
