@@ -1,3 +1,9 @@
+/**
+* Player.java
+*
+* This class contains all the required streams for client and server to communicate
+*/
+
 import java.net.Socket;
 import java.io.BufferedWriter;
 import java.io.BufferedReader;
@@ -27,6 +33,8 @@ public class Player{
     role=r;
     alive=true;
   }
+  
+  //input and output methods from server to client
   public void sendMessage(String s){
     try{
       playerOutput.write(s+"\n");
@@ -46,6 +54,8 @@ public class Player{
     }
     return s;
   }
+  
+  //Setters and getters
   public int getRole(){
     return role;
   }
@@ -64,7 +74,8 @@ public class Player{
   public void setAlive(boolean a){
     alive=a;
   }
-  public void close(){
+ 
+  public void close(){//closing all the streams
     try{
       if(playerOutput!=null)
       playerOutput.close();
