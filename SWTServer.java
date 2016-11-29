@@ -38,7 +38,6 @@ public class SWTServer {
 			ServerSocket serverSock = new ServerSocket(7654);
 			// This is an infinite loop, the user will have to shut it down
 			// using control-c
-			SWTGame game = new SWTGame();
 
 			while(true) {
 					connectionSock = serverSock.accept();//waiting for new connection
@@ -60,7 +59,7 @@ public class SWTServer {
 						for(int x=0; x<9; ++x){
 							playerList.add(waitingList.remove(0));
 						}
-						SWTGame game=new SWTGame(playerList,waitingList);//start a game thread
+						SWTGame game=new SWTGame(playerList);//start a game thread
 						Thread theThread = new Thread(game);
 						theThread.start();
 					}
