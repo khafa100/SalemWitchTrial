@@ -41,7 +41,7 @@ public class SWTServer {
 			SWTGame game = new SWTGame();
 
 			while(true) {
-					connectionSock = serverSock.accept();
+					connectionSock = serverSock.accept();//waiting for new connection
 					clientOutput= new BufferedWriter(new OutputStreamWriter(connectionSock.getOutputStream()));
 		      clientInput= new BufferedReader(new InputStreamReader(connectionSock.getInputStream()));
 					playerName=clientInput.readLine();
@@ -50,17 +50,17 @@ public class SWTServer {
 					waitingList.add(player);
 					System.out.println(playerName+" has connected successfully.");
 
-					if(waitingList.size()<9){
+					if(waitingList.size()<9){//if there are not enough players
 							clientOutput.write("0\n");
 							clientOutput.write("Waiting for more players...\n");
 							clientOutput.flush();
 					}
-					else{
-						playerList=new ArrayList<Player>();
+					else{//if there are enough player
+						playerList=new ArrayList<Player>();//create a list of players
 						for(int x=0; x<9; ++x){
 							playerList.add(waitingList.remove(0));
 						}
-						SWTGame game=new SWTGame(playerList,waitingList);
+						SWTGame game=new SWTGame(playerList,waitingList);//start a game thread
 						Thread theThread = new Thread(game);
 						theThread.start();
 					}
