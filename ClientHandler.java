@@ -231,12 +231,12 @@ public class ClientHandler implements Runnable {
   					  }
   					}
   					String msg="1\n";
-  					if(player.isAlive()){
+  					if(player.isAlive()){//if player is a civilian, don't ask anything
   					  if(player.getRole()==1 || player.getRole()==2){
     					player.sendMessage("0\nWaiting for other players to decide...");
     				}
-  					  else{
-      					switch(player.getRole()){
+  					  else{//else ask question depending on the role and take in the answer
+      					switch(player.getRole()){//buliding the question depending on the role
       						case 0:
       									msg+= "Please choose the number corresponding to the username to save.";
       									break;
@@ -267,7 +267,7 @@ public class ClientHandler implements Runnable {
       					}
   					    msg+=" (0-"+count+")";
   					    player.sendMessage(msg);
-  					    while(true){
+  					    while(true){//getting the correct input from the user
   						try{
   							playerText=player.getMessage();
   							int v = Integer.parseInt(playerText);
@@ -294,7 +294,7 @@ public class ClientHandler implements Runnable {
 
   				case 5:
     				if(player.isAlive()){
-    					if(player.getRole()==3){
+    					if(player.getRole()==3){//giving the investigation result if player is sheriff
     					  player.sendMessage("0\n-----------------------------------------------------------------");
     						if(sync.vote[3]==1){
     							player.sendMessage("0\nThe person you investigated is a memeber of the Mafia.");
@@ -306,7 +306,7 @@ public class ClientHandler implements Runnable {
     						  player.sendMessage("You chose to not investgate anyone.");
     						}
     					}
-    					if(player.getRole()==4){
+    					if(player.getRole()==4){//telling who visited if player is look out
     					  player.sendMessage("0\n-----------------------------------------------------------------");
     						if(sync.vote[2]==-1){
     							player.sendMessage("0\nNothing happened.");
@@ -330,20 +330,20 @@ public class ClientHandler implements Runnable {
     				break;
 				}
 			}
-			if(sync.currentStage==6){
+			if(sync.currentStage==6){//will ask question if the game is ended properly
 			  endQuestion();
 			}
 		}
-		catch (Exception e) {
+		catch (Exception e) {//If any error occur, the player will be considered dead and removed from the list
 			System.out.println("Error: " + e.toString());
 			sync.deadInitial+=player.getUsername()+" ("+roleArray[player.getRole()]+"), ";
 			playerList.remove(player);
 			player.close();
 		}
 	}
-	private void printBoard(){
-		String alive="0\nAlive:  ";
-		String dead="";
+	private void printBoard(){//This show the current state of the game
+		String alive="0\nAlive:  ";//contain all alive players
+		String dead="";//contain all dead players
 		dead+=sync.deadInitial;
 		for(Player p: playerList){
 			if(p.isAlive()){
@@ -356,16 +356,18 @@ public class ClientHandler implements Runnable {
 		alive= alive.substring(0,alive.length()-2);//deleting last instance of ", "
 		dead= dead.substring(0,dead.length()-2);//deleting last instance of ", "
 		player.sendMessage("0\n-----------------------------------------------------------------");
+		player.sendMessage("0\nMafia Members left: "+sync.mafiaMember);
+		player.sendMessage("0\nInnocent people left: "+sync.innocentMember);
 		player.sendMessage(alive+dead);
 		player.sendMessage("0\n-----------------------------------------------------------------");
 	}
-	private void broadcastPlayers(String s){
+	private void broadcastPlayers(String s){//This will send to all other players in the list
 		for(Player p: playerList) {
 			if(p.getSocket() != playerSocket)
 			  p.sendMessage(s);
 		}
 	}
-	private void endQuestion(){
+	private void endQuestion(){//The game is over so all the player have a choice to join another game or leave
 		player.sendMessage("1\nDo you want to play another game? (y/n)");
 		playerText=player.getMessage();
 		if(playerText.equals("y")){
@@ -379,7 +381,7 @@ public class ClientHandler implements Runnable {
 			player.close();
 		}
 }
-  private boolean deadQuestion(){
+  private boolean deadQuestion(){//if a person is dead, they can stay in the game, reconnect to another game, or quit from server
     player.sendMessage("0\nYou are dead.");
     player.sendMessage("0\n-----------------------------------------------------------------");
     player.sendMessage("0\nPlease choose one option below. (1-3)");
