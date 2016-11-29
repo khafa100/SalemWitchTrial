@@ -422,4 +422,4 @@ public class ClientHandler implements Runnable {
 			}
     }
   }
-}
+}//ClientHandler for SWTGame
