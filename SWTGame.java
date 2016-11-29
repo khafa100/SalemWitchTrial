@@ -1,17 +1,23 @@
+/**
+* SWTGame.java
+*
+* This thread is run everytime the server has 9 players in the waitingList
+* This will encompass one game and end when the game is over
+*/
+
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 
 public class SWTGame implements Runnable
 {
-	private ArrayList<Player> playerList;
-	private ArrayList<Player> waitingList;//players wanting to play again will be added back to the list
+	private ArrayList<Player> playerList;// list of players
 	private String roleArray[]= new String[]{"Doctor","Civilian","Civilian","Sheriff","Lookout","Vigilante","Framer","Mafiaso","Godfather"};
-	private PlayerSync sync=new PlayerSync();
+	private PlayerSync sync=new PlayerSync();//class to be shared between all threads
 
-	SWTGame(ArrayList<Player> playerList,ArrayList<Player> waitingList){
+	SWTGame(ArrayList<Player> playerList){
 		this.playerList=playerList;
-		this.waitingList=waitingList;
 	}
 	public void run(){//main thread
 		System.out.println("Assigning a role to each player...");
@@ -19,24 +25,24 @@ public class SWTGame implements Runnable
 
 		//Starting game
 		System.out.println("Starting game...");
-		for(Player p: playerList){
-			ClientHandler handler=new ClientHandler(p,playerList,waitingList,sync);
+		for(Player p: playerList){// running threads for each client
+			ClientHandler handler=new ClientHandler(p,playerList,sync);
 			Thread theThread = new Thread(handler);
 			theThread.start();
 		}
 		
 		game:
-		while(sync.currentStage<6){
+		while(sync.currentStage<6){//This game loop will end when ending condition is met
 			try{
 			  //Day Server Stage
 			  System.out.println("Going into day chat server stage...");
 				Thread.sleep(120000);//sleep for 2 min
-				sync.endStage=true;
+				sync.endStage=true;//notify other threads to end stage
 				while(true){
-					if(sync.threadDone==sync.mafiaMember+sync.innocentMember){
+					if(sync.threadDone==sync.mafiaMember+sync.innocentMember){//if all other threads are done
 						System.out.println("Proceeding into next stage...");
 						sync.mostVote=-1;
-						sync.currentStage++;
+						sync.currentStage++;//move to next stage
 						sync.threadDone=0;
 						break;
 					}
@@ -45,7 +51,7 @@ public class SWTGame implements Runnable
   					System.out.println("Mafia left: "+sync.mafiaMember);
   					System.out.println("Innocent left: "+sync.innocentMember);
 						System.out.println("Waiting for all players to finish");
-						Thread.sleep(5000);
+						Thread.sleep(5000);//sleep for 5 sec
 					}
 				}
 				sync.endStage=false;
@@ -54,14 +60,14 @@ public class SWTGame implements Runnable
 				System.out.println("Asking for nominations...");
 				sync.vote=new int[]{0,0,0,0,0,0,0,0,0};
 				while(true){
-					if(sync.threadDone==sync.mafiaMember+sync.innocentMember){
+					if(sync.threadDone==sync.mafiaMember+sync.innocentMember){//if other threads are done
 						int half= (sync.mafiaMember+sync.innocentMember)/2;
 						for (int x=0;x<sync.mafiaMember+sync.innocentMember;++x){
 							if(sync.vote[x]>half){
-								sync.mostVote=x;
+								sync.mostVote=x;//try to find the player who got most vote
 							}
 						}
-						if(sync.mostVote!=-1){
+						if(sync.mostVote!=-1){//if someone is lynched update the values
 							Player p= playerList.get(sync.mostVote);
 							if(p.getRole()>5){
 								sync.mafiaMember--;
@@ -72,9 +78,9 @@ public class SWTGame implements Runnable
 							p.setAlive(false);
 						}
 						System.out.println("Proceeding into next stage...");
-						if(isGameOver()){
-							sync.currentStage=6;
-							break game;
+						if(isGameOver()){//if end conditions are met
+							sync.currentStage=6;//tell all threads to end
+							break game;//end game
 						}
 						else{
 							sync.currentStage++;
@@ -96,13 +102,13 @@ public class SWTGame implements Runnable
 				Thread.sleep(60000);//sleep for 1 min
 				sync.endStage=true;
 				while(true){
-					if(sync.threadDone==sync.mafiaMember+sync.innocentMember){
+					if(sync.threadDone==sync.mafiaMember+sync.innocentMember){//if all other threads are done
 						System.out.println("Proceeding into next stage...");
-						sync.currentStage++;
+						sync.currentStage++;//move on to next stage
 						sync.threadDone=0;
 						break;
 					}
-					else{
+					else{//else wait 5 sec before trying again
 					  System.out.println("Thread done: "+sync.threadDone);
 						System.out.println("Mafia left: "+sync.mafiaMember);
 						System.out.println("Innocent left: "+sync.innocentMember);
@@ -119,13 +125,13 @@ public class SWTGame implements Runnable
 					if(sync.threadDone==sync.mafiaMember+sync.innocentMember){
 						System.out.println("Processing all the actions...");
 						int mafiaKill=-1, vigilanteKill=-1, lookoutNum=-1, sheriffNum=-1;
-						if (sync.vote[8]!=-1){//godfater and doctor
+						if (sync.vote[8]!=-1){//if godfather chose to kill
 						  Player p= playerList.get(sync.vote[8]);
-							if(sync.vote[0]!=sync.vote[8]){
+							if(sync.vote[0]!=sync.vote[8]){//if doctor didn't chose the same target
 								mafiaKill=sync.vote[8];
 							  broadcastPlayers("0\nLast night, "+p.getUsername()+" was attacked. Unfortunately, no one was there to save him.");
 							  broadcastPlayers("0\nTheir role was "+roleArray[p.getRole()]+".");
-
+							//updating values
 							  if(p.getRole()>5){
 								  sync.mafiaMember--;
 							  }
@@ -134,13 +140,13 @@ public class SWTGame implements Runnable
 							  }
 							  p.setAlive(false);
 							}
-							else{
+							else{//doctor and godfather had same target
 								broadcastPlayers("0\nLast night, "+p.getUsername()+" was attacked. Fortunately, he was saved by the Doctor.");
 							}
 						}
-						else if(sync.vote[7]!=-1){//mafiaso and doctor
+						else if(sync.vote[7]!=-1){//if godfather didn't choose to kill and mafia chose to kill
 						  Player p= playerList.get(sync.vote[7]);
-							if(sync.vote[7]!=sync.vote[0]){
+							if(sync.vote[7]!=sync.vote[0]){//check again with the doctor's choice
 							  mafiaKill=sync.vote[7];
 							  broadcastPlayers("0\nLast night, "+p.getUsername()+" was attacked. Unfortunately, no one was there to save him.");
 							  broadcastPlayers("0\nTheir role was "+roleArray[p.getRole()]+".");
@@ -199,11 +205,11 @@ public class SWTGame implements Runnable
 						  }
             }
             
-						if(isGameOver()){
+						if(isGameOver()){//check for end conditions
 							sync.currentStage=6;
 							break game;
 						}
-						else{
+						else{//relaying the end results
 							sync.vote[0]=mafiaKill;
 							sync.vote[1]=vigilanteKill;
 							sync.vote[2]=lookoutNum;
@@ -255,7 +261,7 @@ public class SWTGame implements Runnable
 		}
 		Collections.shuffle(playerList);
 	}
-	private void broadcastPlayers(String s){
+	private void broadcastPlayers(String s){//sending out message to all player on the list
 		for(Player p: playerList)
 		  p.sendMessage(s);
 	}
