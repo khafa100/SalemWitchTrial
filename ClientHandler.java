@@ -11,11 +11,11 @@ import java.net.Socket;
 import java.util.ArrayList;
 
 public class ClientHandler implements Runnable {
-	private Player player;
-	private ArrayList<Player> playerList;
-	private ArrayList<Player> waitingList;
-	private PlayerSync sync;
-	private Socket playerSocket;
+	
+	private Player player;//This contains all the functions of the current client
+	private ArrayList<Player> playerList;//This contains the list of all the player that is watching the game
+	private PlayerSync sync;//This is a class shared between all players and the game
+	private Socket playerSocket;//The socket of the player
 	private String descriptionArray[]= new String[]{"You heal one person (including yourself) each night preventing them from dying.",
 	"You are a part of the crowd that can vote to lynch people each round.",
 	"You are a part of the crowd that can vote to lynch people each round.",
@@ -24,36 +24,36 @@ public class ClientHandler implements Runnable {
 	"You kill someone each night to save the town.",
 	"You choose someone to frame at night. If the target is investigated, they will appear to be a member of the Mafia. If Mafioso dies, you will take their position.",
 	"You carry out Godfather’s orders. If Godfather dies, you will take their position.",
-	"You will kill someone each night if the Mafioso is dead. Else, the Mafioso will kill the target for you."};
-	private String roleArray[]= new String[]{"Doctor","Civilian","Civilian","Sheriff","Lookout","Vigilante","Framer","Mafiaso","Godfather"};
-	private String playerText=null;
+	"You will kill someone each night if the Mafioso is dead. Else, the Mafioso will kill the target for you."};//Descriptions of the roles
+	private String roleArray[]= new String[]{"Doctor","Civilian","Civilian","Sheriff","Lookout","Vigilante","Framer","Mafiaso","Godfather"};//Name of the roles
+	private String playerText=null;//The will store inputs from the user
 
-	ClientHandler(Player player, ArrayList<Player> playerList, ArrayList<Player> waitingList, PlayerSync sync) {
+	ClientHandler(Player player, ArrayList<Player> playerList, PlayerSync sync) {
 		this.player=player;
 		this.sync=sync;
-		this.playerList=playerList; // Keep reference to master list
-		this.waitingList=waitingList;
-		playerSocket=player.getSocket();
+		this.playerList=playerList;
+		playerSocket=player.getSocket();//This will be later used to compare sockets to make sure it is not the player himself
 	}
 
 	public void run() {
 		try {
-		  player.sendMessage("0\n-----------------------------------------------------------------");
-		  player.sendMessage("0\nYour role is "+roleArray[player.getRole()]+".");
+			//Stating and describing player's role
+		  	player.sendMessage("0\n-----------------------------------------------------------------");
+			player.sendMessage("0\nYour role is "+roleArray[player.getRole()]+".");
 			player.sendMessage("0\n"+descriptionArray[player.getRole()]);
 			game:
 			while(sync.currentStage<6) {
 				switch (sync.currentStage){
 					case 1://Day chat server stage
-  					printBoard();
+  					printBoard();//Stating the current stage
   					for(int x=0; x<2; ++x){
-  					  if(sync.vote[x]!=-1){
-  					    if(playerSocket==playerList.get(sync.vote[x]).getSocket()){
+  					  if(sync.vote[x]!=-1){//checking if any players are killed from stage 5
+  					    if(playerSocket==playerList.get(sync.vote[x]).getSocket()){//if the player himself is killed
   					      if(deadQuestion()){
   					        break game;
   					      }
   					    }
-  					    else if(player.isAlive()){
+  					    else if(player.isAlive()){//if someone died, the roles will be updated depending on the role
   					      Player dead=playerList.get(sync.vote[x]);
   							  if(dead.getRole()==8){
   								  if(player.getRole()==7){
@@ -74,7 +74,7 @@ public class ClientHandler implements Runnable {
   						  }
   					  }
   					}
-  					if(player.isAlive()){
+  					if(player.isAlive()){//intiating the chat server
     					player.sendMessage("2\nYou can now chat for 2 minutes.");
     					while(true){
     						playerText = player.getMessage();
@@ -90,15 +90,15 @@ public class ClientHandler implements Runnable {
     							player.close();
     							break game;
     						}
-    						if(sync.endStage){
+    						if(sync.endStage){//checking for end condition
     							player.sendMessage("0\n2 minutes chatting has ended.Press \"Enter\" to continue...");
     							break;
     				}
       				}
-      				sync.threadDone++;
+      				sync.threadDone++;//stating that stage one is completed
   				  }
   					player.sendMessage("0\nWaiting for other players to finish...");
-  					while(sync.currentStage==1){
+  					while(sync.currentStage==1){//will loop until all players are finished
   						Thread.sleep(1000);
   			    }
   					break;
@@ -107,7 +107,8 @@ public class ClientHandler implements Runnable {
   					printBoard();
   					player.sendMessage("0\nYou can nominate one person to lynch.");
   					player.sendMessage("0\n-----------------------------------------------------------------");
-  					int count=0;
+  					//printing out the list of players
+					int count=0;
   					player.sendMessage("0\n0 : No nomination");
   					for(Player p: playerList) {
   						if(p.isAlive()){
@@ -115,7 +116,7 @@ public class ClientHandler implements Runnable {
   						  player.sendMessage("0\n"+count+" : "+p.getUsername());
   					  }
   					}
-  					if(player.isAlive()){
+  					if(player.isAlive()){//asking for input to lynch
   						player.sendMessage("1\nPlease choose the number corresponding to the username to nominate. (0-"+count+")");
   						while(true){
   							try{
@@ -138,25 +139,25 @@ public class ClientHandler implements Runnable {
   								player.sendMessage("1\nPlease enter a \"number\" corresponding to the username to nominate. (0-"+count+")");
   							}
   						}
-  					  sync.threadDone++;
+  					  sync.threadDone++;//stating that stage one is completed
   					}
-  					while(sync.currentStage==2){
+  					while(sync.currentStage==2){//will loop until all players are finished
   						Thread.sleep(1000);
   					}
   					break;
 
 					case 3:
   					printBoard();
-  					if(sync.mostVote==-1){
+  					if(sync.mostVote==-1){//if the no one got lynched
   						player.sendMessage("0\nNo one got majority of vote to get lynched.");
   					}
-  					else if(sync.mostVote==playerList.indexOf(player)){
+  					else if(sync.mostVote==playerList.indexOf(player)){//if the player is lynched
   						player.sendMessage("0\nYou were lynched.");
   						if(deadQuestion()){
   						  break game;
   						}
   					}
-  					else{
+  					else{//if someone got lynched state their role and update the roles of mafia members
   						Player nominee=playerList.get(sync.mostVote);
   						player.sendMessage("0\n"+nominee.getUsername()+" was lynched.");
   						player.sendMessage("0\nTheir role was "+roleArray[nominee.getRole()]+".");
@@ -183,7 +184,7 @@ public class ClientHandler implements Runnable {
   					player.sendMessage("0\n-----------------------------------------------------------------");
   					player.sendMessage("0\nGoing into night time...");
   					player.sendMessage("0\nMafia members can now chat for 1 minute.");
-  					if(player.isAlive()){
+  					if(player.isAlive()){//Starting the night time chat server
   					  if(player.getRole()>5){
     						player.sendMessage("2\nYou can now chat with other Mafia Memebers for 1 minute.");
     						while(true){
@@ -204,7 +205,7 @@ public class ClientHandler implements Runnable {
       							player.close();
       							break game;
       						}
-        					if(sync.endStage){
+        					if(sync.endStage){//checking for end condition
         						player.sendMessage("0\n1 minutes chatting has ended. Press \"Enter\" to continue...");
         						break;
         					}
