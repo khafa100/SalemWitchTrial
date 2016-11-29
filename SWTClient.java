@@ -24,7 +24,7 @@ public class SWTClient{
     Control control= new Control();
 
     keyboard = new Scanner(System.in);
-    System.out.print("Please enter the address of the server (press enter if it is a localhost): ");
+    System.out.print("Please enter the address of the server (press enter if it is a localhost): ");//asking for server address
     serverAddress= keyboard.nextLine();
     if(serverAddress.equals(""))
     serverAddress="localhost";
@@ -36,21 +36,21 @@ public class SWTClient{
 
       System.out.println("Connection made.");
       System.out.println("--------------------------------------------------------------------------------");
-      System.out.println("Welcome to Salem Witch Trial Game!!");
+      System.out.println("Welcome to Salem Witch Trial Game!!");//saying basic rules
       System.out.println("You will be matched with 8 other players to play a game. Here are the rules:");
       System.out.println("    - You will be given a role which will be either on Innocent or Mafia faction.");
       System.out.println("    - The Mafia will win if it has more players than the Innocent does.");
       System.out.println("    - The Innocent will win if all the Maifa members are killed.");
       System.out.println("--------------------------------------------------------------------------------");
 
-      System.out.print("Please enter a name you wished to be addressed as: ");
+      System.out.print("Please enter a name you wished to be addressed as: ");//asking for username
       username= keyboard.nextLine();
       serverOutput.write(username+"\n");
       serverOutput.flush();
 
       IOLoop:
-      while(true){
-        IOState=serverInput.readLine();
+      while(true){//will stay in loop until the server send 3 as a IOState
+        IOState=serverInput.readLine();//every message from server will have a IOState header to tell how the client should interact with the message
         switch(IOState){
 
           case "0": //server is broadcasting information
@@ -85,12 +85,14 @@ public class SWTClient{
           System.out.println(serverReply);
           break IOLoop;
           
-          case "4"://server telling to connect again
+          case "4"://server is telling to connect again
           serverReply= serverInput.readLine();
           System.out.println(serverReply);
+          //closing all old streams
           serverInput.close();
           serverOutput.close();
           connectionSock.close();
+          //making a new connection to server
           connectionSock=new Socket(serverAddress, 7654);
           serverOutput= new BufferedWriter(new OutputStreamWriter(connectionSock.getOutputStream()));
           serverInput= new BufferedReader(new InputStreamReader(connectionSock.getInputStream()));
