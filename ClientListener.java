@@ -19,20 +19,20 @@ public class ClientListener implements Runnable{
 		this.control=control;
 	}
 
-	public void run(){
+	public void run(){//this method will be called when the chat server stage begins
        		 // Wait for data from the server.  If received, output it.
 		try{
 			String IOState, serverReply;
 			serverReply= serverInput.readLine();
 			System.out.println(serverReply);
-			while (!control.end){
+			while (!control.end){//will continue looping as long as IOState is 2.
 				// Get data sent from the server
 				IOState = serverInput.readLine();
 				if (IOState.equals("2")){
 					serverReply= serverInput.readLine();
 					System.out.println(serverReply);
 				}
-				else if (IOState.equals("0")){
+				else if (IOState.equals("0")){//will set the sentinel value to true
 					control.end=true;
 					serverReply= serverInput.readLine();
 					System.out.println(serverReply);
@@ -44,4 +44,4 @@ public class ClientListener implements Runnable{
 			control.end=true;
 		}
 	}
-} // ClientListener for MTClient
+} // ClientListener for SWTClient
