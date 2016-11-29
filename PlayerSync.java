@@ -1,3 +1,8 @@
+/**
+* PlayerSync.java
+*
+* This class is shared between SWTGame and all threads in SWTGame. This is used to synchronize all the threads so that all players are on the same page
+*/
 public class PlayerSync{
   public volatile boolean endStage;//a sentinel value to end chat servers
   public volatile int threadDone;//counter to make sure every thread finished the stages
@@ -7,7 +12,7 @@ public class PlayerSync{
   public volatile int vote[];//will contain votes and also actions chosen by players
   public volatile String deadInitial;//will contain username of players who left the game
 
-  public PlayerSync(){
+  public PlayerSync(){//initializing to default values
     endStage=false;
     threadDone=0;
     currentStage=1;
