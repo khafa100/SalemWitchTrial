@@ -3,7 +3,12 @@ Class Project
 * Roles
 	* Hein Thu: SWTClient.java, SWTGame.java, SWTServer.java, ClientHandler.java, ClientListener.java, Player.java, PlayerSync.java, Control.java
 	* Shereef Khafagi: SWTServer.java, ClientHandler.java
+* Instruction
+	* complie all the .java file ("javac *.java")
+	* run server file ("java SWTServer")
+	* if you are testing, run nine instances of client file ("java SWTClient")
 * Game Description
+	* The game will be run on one server
 	* The game will have 9 total players each having one of these roles:
 		* 2 Civilians (Innocents): can vote to lynch people each round.
 		* Doctor (Innocents): heals one person (including himself) each night preventing them from dying.
